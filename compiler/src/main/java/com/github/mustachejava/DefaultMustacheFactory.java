@@ -10,6 +10,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
+import javax.servlet.ServletContext;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +51,7 @@ public class DefaultMustacheFactory implements MustacheFactory {
 
   private final String resourceRoot;
   private final File fileRoot;
+  private ServletContext servletContext;
 
   protected ListeningExecutorService les;
 
@@ -67,6 +69,11 @@ public class DefaultMustacheFactory implements MustacheFactory {
     if (!resourceRoot.endsWith("/")) resourceRoot += "/";
     this.resourceRoot = resourceRoot;
     this.fileRoot = null;
+  }
+
+  public DefaultMustacheFactory(String resourceRoot, ServletContext servletContext) {
+    this(resourceRoot);
+    this.servletContext = servletContext;
   }
 
   /**
@@ -106,9 +113,16 @@ public class DefaultMustacheFactory implements MustacheFactory {
 
   @Override
   public Reader getReader(String resourceName) {
-    ClassLoader ccl = Thread.currentThread().getContextClassLoader();
     String name = (resourceRoot == null ? "" : resourceRoot) + resourceName;
-    InputStream is = ccl.getResourceAsStream(name);
+    InputStream is = null;
+
+    if (servletContext != null) {
+      is = servletContext.getResourceAsStream(name);
+    }
+    if (is == null) {
+      ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+      is = ccl.getResourceAsStream(name);
+    }
     if (is == null) {
       is = DefaultMustacheFactory.class.getClassLoader().getResourceAsStream(name);
     }
